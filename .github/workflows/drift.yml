@@ -19,7 +19,7 @@ jobs:
     env:
       TF_VAR_region: ${{ vars.AWS_REGION }}
       TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
-      TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
+      TF_VAR_cloudflare_zone_id: ${{ secrets.CLOUDFLARE_ZONE_ID }}
       TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
       TF_VAR_runtime_boundary_arn: ${{ vars.RUNTIME_BOUNDARY_ARN }}
       TF_VAR_free_plan_expires_on: ${{ vars.FREE_PLAN_EXPIRES_ON }}

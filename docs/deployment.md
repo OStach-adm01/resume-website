@@ -10,17 +10,48 @@ Review the resource plan and current AWS pricing. Expect one `t4g.small`, 16 GiB
 
 ## Bootstrap
 
-Copy the example configuration and supply your account-specific bucket name:
+### New account only: create the state bucket
+
+Use this sequence only when the account has not been bootstrapped and no remote bootstrap state exists. The committed backend declaration must be temporarily disabled because its S3 bucket does not exist yet. On an already bootstrapped account, use the existing-backend instructions below instead.
+
+Copy the example configuration and supply your account-specific bucket name. Authenticate using your non-root bootstrap profile before proceeding:
 
 ```bash
 cp infra/bootstrap/terraform.tfvars.example infra/bootstrap/terraform.tfvars
+# Edit terraform.tfvars with the intended account, repository, and region.
+umask 077
+mv infra/bootstrap/backend.tf infra/bootstrap/backend.tf.disabled
 terraform -chdir=infra/bootstrap init
 terraform -chdir=infra/bootstrap plan -out=bootstrap.tfplan
+# Review the plan before applying it.
 terraform -chdir=infra/bootstrap apply bootstrap.tfplan
 terraform -chdir=infra/bootstrap output
 ```
 
-The first bootstrap uses local state to solve the backend creation dependency. Keep that state encrypted and outside Git. Once the bucket exists, copy `backend.tf.example` to `backend.tf` in the bootstrap module, then run `terraform init -migrate-state` with the bucket, region, encryption, `use_lockfile=true`, and key `bootstrap/terraform.tfstate`. Commit the backend declaration, never the state. CI roles are explicitly denied access to the bootstrap state prefix. The state bucket has `prevent_destroy`; preserve it during normal teardown.
+The first bootstrap uses local state to solve the backend creation dependency. Keep it on encrypted storage and outside Git. After a successful apply, make a private backup of `infra/bootstrap/terraform.tfstate`, then restore the backend declaration and configure the destination:
+
+```bash
+mv infra/bootstrap/backend.tf.disabled infra/bootstrap/backend.tf
+cp infra/bootstrap/backend.hcl.example infra/bootstrap/backend.hcl
+# Edit backend.hcl: bucket name and allowed_account_ids must match your account.
+terraform -chdir=infra/bootstrap init -migrate-state -backend-config=backend.hcl
+terraform -chdir=infra/bootstrap plan
+```
+
+Confirm copying the existing local state when prompted. If the destination already contains conflicting state, stop and investigate; do not force an overwrite. After migration, verify the remote object is versioned and encrypted, and require a no-change plan before continuing. Keep the private backup until verification is complete. Do not reuse the pre-migration saved plan.
+
+Only the generic backend declaration and example settings belong in Git. The real `backend.hcl`, state, backups, and saved plans are ignored. CI roles are explicitly denied access to the bootstrap state prefix. The state bucket has `prevent_destroy`; preserve it during normal teardown.
+
+### Existing backend: initialize another checkout
+
+Restore your account-specific `terraform.tfvars` and `backend.hcl` from the examples, then authenticate with the intended bootstrap administrator and run:
+
+```bash
+terraform -chdir=infra/bootstrap init -backend-config=backend.hcl
+terraform -chdir=infra/bootstrap plan
+```
+
+Do not disable the backend or migrate unrelated local state into an existing deployment. A fresh checkout must find the existing resources through remote state, not propose creating them again.
 
 If the GitHub OIDC provider already exists in the account, import it into bootstrap state before planning instead of creating a duplicate.
 

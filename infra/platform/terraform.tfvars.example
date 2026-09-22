@@ -1,0 +1,6 @@
+domain_name          = "example.com"
+cloudflare_zone_id   = "REPLACE_ZONE_ID"
+alert_email          = "you@example.com"
+runtime_boundary_arn = "arn:aws:iam::123456789012:policy/resume-website-runtime-boundary"
+free_plan_expires_on = "2027-01-01"
+region               = "eu-central-1"

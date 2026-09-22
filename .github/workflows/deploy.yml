@@ -1,0 +1,75 @@
+name: Deploy
+on:
+  workflow_call:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: production-mutations
+  cancel-in-progress: false
+jobs:
+  release:
+    environment: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      TF_VAR_region: ${{ vars.AWS_REGION }}
+      TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
+      TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
+      TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+      TF_VAR_runtime_boundary_arn: ${{ vars.RUNTIME_BOUNDARY_ARN }}
+      TF_VAR_free_plan_expires_on: ${{ vars.FREE_PLAN_EXPIRES_ON }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      RELEASE_SHA: ${{ github.sha }}
+      RESUME_VERSION: ${{ vars.RESUME_VERSION }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: { node-version-file: .nvmrc, cache: npm }
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with: { terraform_version: 1.16.1, terraform_wrapper: false }
+      - run: bash scripts/install-tools.sh
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Apply the reviewed main configuration
+        env:
+          STATE_BUCKET: ${{ vars.STATE_BUCKET }}
+        run: |
+          terraform -chdir=infra/platform init -input=false -backend-config="bucket=$STATE_BUCKET" -backend-config="key=platform/terraform.tfstate" -backend-config="region=$AWS_REGION" -backend-config=encrypt=true
+          terraform -chdir=infra/platform plan -input=false -out=deploy.tfplan
+          terraform -chdir=infra/platform apply -input=false deploy.tfplan
+          terraform -chdir=infra/platform output -json | python3 scripts/outputs-env.py >> "$GITHUB_ENV"
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ vars.PUBLISH_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          unset-current-credentials: true
+      - run: npm ci
+      - name: Build with release and resume identifiers
+        run: PUBLIC_RELEASE_SHA="$RELEASE_SHA" PUBLIC_RESUME_VERSION="$RESUME_VERSION" npm run build
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build, scan, and publish the ARM64 runtime
+        run: |
+          registry="${ECR_REPOSITORY%%/*}"
+          aws ecr get-login-password | docker login --username AWS --password-stdin "$registry"
+          existing=$(aws ecr describe-images --repository-name resume-website | jq -r --arg sha "$RELEASE_SHA" '.imageDetails[] | select((.imageTags // []) | index($sha)) | .imageDigest')
+          if [ -z "$existing" ]; then
+            docker buildx build --platform linux/arm64 --target runtime -f containers/nginx/Dockerfile -t "$ECR_REPOSITORY:$RELEASE_SHA" --load .
+            trivy image --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed "$ECR_REPOSITORY:$RELEASE_SHA"
+            docker push "$ECR_REPOSITORY:$RELEASE_SHA"
+          else
+            trivy image --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed "$ECR_REPOSITORY@$existing"
+          fi
+          digest=$(aws ecr describe-images --repository-name resume-website --image-ids "imageTag=$RELEASE_SHA" --query 'imageDetails[0].imageDigest' --output text)
+          echo "IMAGE_DIGEST=$digest" >> "$GITHUB_ENV"
+      - run: bash scripts/publish-release.sh
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ vars.DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          unset-current-credentials: true
+      - run: bash scripts/deploy-release.sh

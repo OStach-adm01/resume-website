@@ -1,0 +1,78 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  website:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test && npm run test:api
+      - run: npm run build
+      - run: npm audit --audit-level=high
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - run: node scripts/lighthouse.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: website-reports
+          path: |
+            playwright-report/
+            test-results/
+            .artifacts/lighthouse/
+          include-hidden-files: true
+          retention-days: 7
+  infrastructure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: 1.16.1
+      - run: bash scripts/install-tools.sh
+      - run: python3 -m pip install -r requirements-ci.txt
+      - run: make infra-check chart-check
+      - run: |
+          tflint --init
+          tflint --chdir=infra/bootstrap --config="$PWD/.tflint.hcl"
+          tflint --chdir=infra/platform --config="$PWD/.tflint.hcl"
+          helm template resume charts/resume | kubeconform -strict -summary
+          actionlint
+          trivy config --severity HIGH,CRITICAL --exit-code 1 --skip-dirs '**/.terraform' --skip-dirs node_modules --skip-dirs .artifacts .
+          trivy fs --scanners secret --exit-code 1 --skip-dirs node_modules --skip-dirs '**/.terraform' --skip-dirs .artifacts .
+  container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - run: bash scripts/install-tools.sh
+      - run: python3 -m pip install -r requirements-ci.txt
+      - run: docker build --target runtime -f containers/nginx/Dockerfile -t resume:test .
+      - run: trivy image --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed resume:test
+      - name: Scan the ARM64 S3 init-container
+        run: |
+          init_image=$(python3 -c 'import yaml; print(yaml.safe_load(open("charts/resume/values.yaml"))["initImage"])')
+          trivy image --image-src remote --platform linux/arm64 --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed "$init_image"
+      - run: bash scripts/test-container.sh
+  deploy:
+    needs: [website, infrastructure, container]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit

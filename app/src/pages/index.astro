@@ -1,0 +1,282 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { certificates } from '../data/certificates';
+const release = import.meta.env.PUBLIC_RELEASE_SHA || 'local-development';
+const resumeVersion = import.meta.env.PUBLIC_RESUME_VERSION || '';
+---
+
+<Layout>
+  <main id="main">
+    <section class="shell hero">
+      <div class="hero-copy">
+        <p class="eyebrow">
+          <span class="dot"></span> LEARNING BY BUILDING / WARSAW, PL
+        </p>
+        <h1>
+          Infrastructure,
+          <br />
+          built with <em>intent.</em>
+        </h1>
+        <p class="intro">
+          I'm <strong>Olgierd Stach.</strong> I build reproducible environments
+          and turn hands-on learning into working projects.
+        </p>
+        <p class="hero-detail">
+          Linux, automation, and the path from a commit to a running
+          application. This website is part of that journey.
+        </p>
+        <div class="actions">
+          <button
+            id="download-resume"
+            class="button primary"
+            disabled={!resumeVersion}
+            data-version={resumeVersion}
+          >
+            Download resume <span aria-hidden="true">↓</span>
+          </button>
+          <a class="text-link" href="#work">
+            Explore the build <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+        {!resumeVersion && (
+          <p class="availability">Resume PDF will be published soon.</p>
+        )}
+        <div class="skills" aria-label="Project technologies">
+          {['AWS', 'Terraform', 'Kubernetes', 'Python', 'GitHub Actions'].map(
+            (skill) => (
+              <span>{skill}</span>
+            ),
+          )}
+        </div>
+      </div>
+      <aside class="terminal" aria-label="Project architecture overview">
+        <div class="terminal-bar">
+          <div class="window-dots">
+            <i></i>
+            <i></i>
+            <i></i>
+          </div>
+          <span>resume-website / architecture</span>
+          <span>↗</span>
+        </div>
+        <div class="terminal-body">
+          <p class="terminal-command">
+            <span>$</span> describe this project
+          </p>
+          <p class="terminal-muted">
+            A small website. A complete delivery path.
+          </p>
+          <ol class="architecture-steps">
+            <li>
+              <span class="step-number">01</span>
+              <div>
+                <strong>Commit & verify</strong>
+                <small>GitHub Actions · tests · security scans</small>
+              </div>
+            </li>
+            <li>
+              <span class="step-number">02</span>
+              <div>
+                <strong>Publish a release</strong>
+                <small>Versioned S3 artifacts · ECR images</small>
+              </div>
+            </li>
+            <li>
+              <span class="step-number">03</span>
+              <div>
+                <strong>Run on Kubernetes</strong>
+                <small>k3s · Helm · Nginx on AWS EC2</small>
+              </div>
+            </li>
+            <li>
+              <span class="step-number">04</span>
+              <div>
+                <strong>Deliver at the edge</strong>
+                <small>CloudFront · HTTPS · custom domain</small>
+              </div>
+            </li>
+          </ol>
+          <div class="terminal-bottom">
+            <span class="dot"></span>
+            <span>Infrastructure defined as code</span>
+            <span class="cursor">▌</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+    <section id="work" class="work-section">
+      <div class="shell">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">01 / BEHIND THE PAGE</p>
+            <h2>The website is the project.</h2>
+          </div>
+          <a
+            class="text-link"
+            href="https://github.com/OStach-adm01/resume-website"
+          >
+            Read the source ↗
+          </a>
+        </div>
+        <p class="section-description">
+          An infrastructure portfolio you can actually inspect. Each layer has a
+          purpose, a test, and a documented way to recover.
+        </p>
+        <div class="feature-grid">
+          <article>
+            <span class="feature-icon">{'{ }'}</span>
+            <h3>Repeatable infrastructure</h3>
+            <p>
+              Terraform describes the AWS resources and DNS. Versioned state
+              keeps changes reviewable.
+            </p>
+            <span class="feature-label">TERRAFORM / AWS</span>
+          </article>
+          <article>
+            <span class="feature-icon">↗</span>
+            <h3>From commit to release</h3>
+            <p>
+              Checks run on every push. Releases pair immutable site files with
+              a container image and Helm configuration.
+            </p>
+            <span class="feature-label">GITHUB ACTIONS / S3 / HELM</span>
+          </article>
+          <article>
+            <span class="feature-icon">◎</span>
+            <h3>Designed for recovery</h3>
+            <p>
+              Health checks, release identifiers, and rollback scripts make
+              operations part of the project.
+            </p>
+            <span class="feature-label">KUBERNETES / CLOUDWATCH</span>
+          </article>
+        </div>
+        <div class="project-note">
+          <strong>A learning environment, with clear boundaries.</strong>
+          <span>
+            One Kubernetes node. No high-availability claim. The repository
+            documents the trade-offs and current validation evidence.
+          </span>
+        </div>
+      </div>
+    </section>
+    <section id="certificates" class="shell certificates">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">02 / VERIFIED LEARNING</p>
+          <h2>Learning with a paper trail.</h2>
+        </div>
+        <span class="section-count">
+          {String(certificates.length).padStart(2, '0')} SELECTED CREDENTIALS
+        </span>
+      </div>
+      <p class="section-description">
+        Completed programs that inform the way I build. Select an image to
+        verify the credential with its issuer.
+      </p>
+      <div class="certificate-grid">
+        {certificates.map((cert, index) => (
+          <article class="certificate">
+            <a
+              class="certificate-image"
+              href={cert.verificationUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`View ${cert.title} credential (opens in a new tab)`}
+            >
+              <img
+                src={cert.image}
+                alt={`${cert.title} completion certificate`}
+                width="720"
+                height="556"
+                loading="lazy"
+              />
+              <span class="image-link" aria-hidden="true">
+                ↗
+              </span>
+            </a>
+            <div class="certificate-meta">
+              <span>{cert.category}</span>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+            </div>
+            <h3>
+              <a
+                href={cert.verificationUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {cert.title}
+              </a>
+            </h3>
+            <p>{cert.issuer}</p>
+          </article>
+        ))}
+      </div>
+      {certificates.length === 0 && (
+        <div class="project-note">
+          <strong>Credentials coming soon.</strong>
+          <span>
+            Course certificates and their verification links will be added here.
+          </span>
+        </div>
+      )}
+    </section>
+    <section class="shell closing">
+      <p class="eyebrow">CONTINUE THE CONVERSATION</p>
+      <h2>Curious about the build?</h2>
+      <p>The source, decisions, and runbooks are open for review.</p>
+      <a
+        class="button primary"
+        href="https://github.com/OStach-adm01/resume-website"
+      >
+        Explore the repository ↗
+      </a>
+      <p class="release">
+        Release <code>{release.slice(0, 12)}</code>
+      </p>
+    </section>
+  </main>
+  <dialog id="recruiter-dialog" aria-labelledby="dialog-title">
+    <form id="recruiter-form">
+      <button
+        class="close-dialog"
+        type="button"
+        aria-label="Close download dialog"
+      >
+        ×
+      </button>
+      <p class="eyebrow">DOWNLOAD RESUME</p>
+      <h2 id="dialog-title">Are you a recruiter?</h2>
+      <p class="dialog-intro">Choose an option to continue.</p>
+      <fieldset>
+        <legend class="sr-only">Are you a recruiter?</legend>
+        <label class="radio-option">
+          <input type="radio" name="recruiter" value="yes" required /> Yes
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="recruiter" value="no" required /> No
+        </label>
+      </fieldset>
+      <div id="company-field" hidden>
+        <label for="company">Company name</label>
+        <input
+          id="company"
+          name="company"
+          autocomplete="organization"
+          minlength="2"
+          maxlength="120"
+        />
+        <p class="privacy-note">
+          Your company name and request time are retained for up to 30 days,
+          plus database deletion processing time.{' '}
+          <a href="/privacy/">Privacy details</a>.
+        </p>
+      </div>
+      <p id="download-status" role="status" aria-live="polite"></p>
+      <button class="button primary" id="confirm-download" type="submit">
+        Continue to download ↓
+      </button>
+    </form>
+  </dialog>
+  <script src="../scripts/download.ts"></script>
+</Layout>

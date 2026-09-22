@@ -1,0 +1,53 @@
+---
+import '../styles/global.css';
+interface Props {
+  title?: string;
+}
+const { title = 'Olgierd Stach — Infrastructure, built with intent.' } =
+  Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Olgierd Stach's engineering portfolio. Explore the infrastructure, automation, and verified learning behind this website."
+    />
+    <meta name="theme-color" content="#101716" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <a class="skip" href="#main">
+      Skip to content
+    </a>
+    <header class="header shell">
+      <a class="wordmark" href="/" aria-label="Olgierd Stach home">
+        os<span>_</span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="/#work">Engineering</a>
+        <a href="/#certificates">Credentials</a>
+        <a
+          class="nav-github"
+          href="https://github.com/OStach-adm01"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          GitHub ↗
+        </a>
+      </nav>
+    </header>
+    <slot />
+    <footer class="shell footer">
+      <span>
+        Olgierd Stach <span class="muted">/</span> Built to be understood.
+      </span>
+      <a href="/privacy/">Privacy</a>
+      <a href="https://github.com/OStach-adm01/resume-website">View source ↗</a>
+    </footer>
+  </body>
+</html>

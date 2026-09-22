@@ -1,0 +1,11 @@
+package-lock.json
+dist
+.astro
+.artifacts
+node_modules
+test-results
+playwright-report
+infra
+charts
+containers
+app/public/certificates

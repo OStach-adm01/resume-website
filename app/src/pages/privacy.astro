@@ -1,0 +1,44 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Privacy — Olgierd Stach">
+  <main id="main" class="shell prose">
+    <p class="eyebrow">PRIVACY</p>
+    <h1>
+      A small amount of data,
+      <br />
+      for a clear purpose.
+    </h1>
+    <p>
+      If you select Yes in the resume download form, this site stores your
+      company name, a random request identifier, and the request time to
+      understand recruiting interest. Do not enter personal information in the
+      company field.
+    </p>
+    <p>
+      The record expires after 30 days. DynamoDB deletes expired records
+      asynchronously, typically within a few days. Selecting No downloads the
+      resume without sending the form to the API.
+    </p>
+    <p>
+      The application does not store your IP address, browser information, email
+      address, or name. Infrastructure providers necessarily process connection
+      information to deliver the website. Application logs do not include
+      submitted company names or request bodies.
+    </p>
+    <p>
+      Certificate images are served by this website. Following a verification
+      link takes you to the certificate provider and its privacy policy. No
+      Credly scripts or embeds are loaded.
+    </p>
+    <p>
+      For questions or deletion requests, contact the site owner through the
+      public <a href="https://github.com/OStach-adm01">GitHub profile</a>. Do
+      not publish personal details in a public issue.
+    </p>
+    <a href="/" class="text-link">
+      ← Back to the website
+    </a>
+  </main>
+</Layout>

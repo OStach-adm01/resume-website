@@ -1,0 +1,156 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: resume
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: resume-nginx-{{ .Values.releaseSha | trunc 12 }}
+data:
+  site.conf: |
+    map $http_x_origin_token $origin_allowed {
+      default 0;
+      include /etc/nginx/origin/allow.conf;
+    }
+    server {
+      listen 8080;
+      root /site;
+      index index.html;
+      location = /healthz { return 200 "ok\n"; }
+      location = /release.json {
+        if ($origin_allowed = 0) { return 403; }
+        default_type application/json;
+        add_header Cache-Control "no-store";
+        return 200 '{"release":"{{ .Values.releaseSha }}"}';
+      }
+      location ^~ /_astro/ {
+        if ($origin_allowed = 0) { return 403; }
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+      }
+      location ^~ /resume/ {
+        if ($origin_allowed = 0) { return 403; }
+        add_header Content-Disposition 'attachment; filename="Olgierd-Stach-Resume.pdf"';
+        add_header Cache-Control "private, no-store";
+        try_files $uri =404;
+      }
+      location / {
+        if ($origin_allowed = 0) { return 403; }
+        add_header Cache-Control "public, max-age=60";
+        try_files $uri $uri/ =404;
+      }
+      error_page 404 /404.html;
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resume
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels: { app: resume }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels: { app: resume }
+      annotations:
+        release-sha: {{ .Values.releaseSha | quote }}
+    spec:
+      serviceAccountName: resume
+      automountServiceAccountToken: false
+      imagePullSecrets: [{ name: ecr-pull }]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        - name: fetch-release
+          image: {{ .Values.initImage | quote }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              aws s3 sync "s3://$BUCKET/releases/$RELEASE_SHA/site/" /site/ --only-show-errors
+              test -s /site/index.html
+              if [ -n "$RESUME_VERSION" ]; then
+                mkdir -p "/site/resume/$RESUME_VERSION" /site/resume/latest
+                aws s3 cp "s3://$BUCKET/resume/$RESUME_VERSION/resume.pdf" "/site/resume/$RESUME_VERSION/resume.pdf" --only-show-errors
+                cp "/site/resume/$RESUME_VERSION/resume.pdf" /site/resume/latest/resume.pdf
+              fi
+          env:
+            - { name: BUCKET, value: {{ .Values.bucket | quote }} }
+            - { name: RELEASE_SHA, value: {{ .Values.releaseSha | quote }} }
+            - { name: RESUME_VERSION, value: {{ .Values.resumeVersion | quote }} }
+            - { name: AWS_DEFAULT_REGION, value: {{ .Values.region | quote }} }
+            - { name: HOME, value: /tmp }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 80Mi }
+            limits: { cpu: 300m, memory: 256Mi }
+          volumeMounts:
+            - { name: site, mountPath: /site }
+            - { name: tmp, mountPath: /tmp }
+      containers:
+        - name: nginx
+          image: "{{ .Values.image.repository }}@{{ .Values.image.digest }}"
+          ports: [{ name: http, containerPort: 8080 }]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 96Mi }
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 15
+          volumeMounts:
+            - { name: site, mountPath: /site, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+            - { name: config, mountPath: /etc/nginx/conf.d, readOnly: true }
+            - { name: origin, mountPath: /etc/nginx/origin, readOnly: true }
+      volumes:
+        - name: site
+          emptyDir: { sizeLimit: 128Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 32Mi }
+        - name: config
+          configMap: { name: "resume-nginx-{{ .Values.releaseSha | trunc 12 }}" }
+        - name: origin
+          secret: { secretName: {{ .Values.originSecret | quote }} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: resume
+spec:
+  type: NodePort
+  selector: { app: resume }
+  ports:
+    - { name: http, port: 80, targetPort: http, nodePort: {{ .Values.nodePort }} }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: resume
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: resume }

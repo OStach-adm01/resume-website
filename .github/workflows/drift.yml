@@ -1,0 +1,55 @@
+name: Drift and availability
+on:
+  schedule:
+    - cron: '17 7 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+concurrency:
+  group: production-mutations
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: vars.DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    environment: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      TF_VAR_region: ${{ vars.AWS_REGION }}
+      TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
+      TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
+      TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+      TF_VAR_runtime_boundary_arn: ${{ vars.RUNTIME_BOUNDARY_ARN }}
+      TF_VAR_free_plan_expires_on: ${{ vars.FREE_PLAN_EXPIRES_ON }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_READ_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with: { terraform_version: 1.16.1, terraform_wrapper: false }
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ vars.DRIFT_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Detect drift and availability failures
+        env:
+          STATE_BUCKET: ${{ vars.STATE_BUCKET }}
+          REGION: ${{ vars.AWS_REGION }}
+          SITE_URL: https://${{ vars.DOMAIN_NAME }}
+        run: |
+          terraform -chdir=infra/platform init -input=false -backend-config="bucket=$STATE_BUCKET" -backend-config="key=platform/terraform.tfstate" -backend-config="region=$REGION" -backend-config=encrypt=true
+          terraform -chdir=infra/platform plan -input=false -detailed-exitcode
+          python3 scripts/smoke.py "$SITE_URL"
+          python3 scripts/check-expiry.py "$TF_VAR_free_plan_expires_on"
+      - name: Report a failure without exposing the plan
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          count=$(gh issue list --search 'in:title "Infrastructure check needs attention"' --state open --json number --jq length)
+          if [ "$count" = 0 ]; then
+            gh issue create --title 'Infrastructure check needs attention' --body "A scheduled check found drift, an availability failure, or an approaching account expiry. Review the private operational details before posting them publicly. Workflow: $RUN_URL"
+          fi

@@ -1,0 +1,60 @@
+#cloud-config
+write_files:
+  - path: /usr/local/bin/resume-deploy
+    owner: root:root
+    permissions: '0700'
+    encoding: b64
+    content: ${deploy_script}
+  - path: /etc/resume.env
+    owner: root:root
+    permissions: '0600'
+    content: |
+      AWS_DEFAULT_REGION=${region}
+      AWS_ACCOUNT_ID=${account}
+  - path: /etc/rancher/k3s/config.yaml
+    owner: root:root
+    permissions: '0600'
+    content: |
+      disable:
+        - traefik
+        - servicelb
+      write-kubeconfig-mode: "0600"
+      secrets-encryption: true
+      flannel-backend: vxlan
+      cluster-cidr: 10.43.0.0/16
+      service-cidr: 10.44.0.0/16
+  - path: /usr/local/bin/refresh-ecr
+    permissions: '0700'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      set -a
+      source /etc/resume.env
+      set +a
+      export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+      aws ecr get-login-password | python3 -c 'import sys,os,json,base64; token=sys.stdin.read().strip(); host=os.environ["AWS_ACCOUNT_ID"]+".dkr.ecr."+os.environ["AWS_DEFAULT_REGION"]+".amazonaws.com"; data=json.dumps({"auths":{host:{"auth":base64.b64encode(("AWS:"+token).encode()).decode()}}}); print(json.dumps({"apiVersion":"v1","kind":"Secret","metadata":{"name":"ecr-pull","namespace":"resume"},"type":"kubernetes.io/dockerconfigjson","data":{".dockerconfigjson":base64.b64encode(data.encode()).decode()}}))' | /usr/local/bin/k3s kubectl apply -f -
+  - path: /etc/systemd/system/resume-ecr.service
+    content: |
+      [Unit]
+      Description=Refresh the short-lived ECR image pull credential
+      After=k3s.service network-online.target
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/refresh-ecr
+  - path: /etc/systemd/system/resume-ecr.timer
+    content: |
+      [Unit]
+      Description=Refresh ECR credentials every six hours
+      [Timer]
+      OnBootSec=5min
+      OnUnitActiveSec=6h
+      Persistent=true
+      [Install]
+      WantedBy=timers.target
+runcmd:
+  - dnf install -y curl tar gzip python3 awscli2
+  - [bash, -ec, 'curl --fail --retry 5 -L https://get.k3s.io -o /tmp/install-k3s.sh; INSTALL_K3S_VERSION="${k3s_version}" sh /tmp/install-k3s.sh']
+  - [bash, -ec, 'cd /tmp; curl --fail --retry 5 -LO https://get.helm.sh/helm-${helm_version}-linux-arm64.tar.gz; curl --fail --retry 5 -LO https://get.helm.sh/helm-${helm_version}-linux-arm64.tar.gz.sha256sum; sha256sum -c helm-${helm_version}-linux-arm64.tar.gz.sha256sum; tar -xzf helm-${helm_version}-linux-arm64.tar.gz; install linux-arm64/helm /usr/local/bin/helm']
+  - [bash, -ec, 'for attempt in $(seq 1 60); do /usr/local/bin/k3s kubectl get nodes && break; sleep 5; done; /usr/local/bin/k3s kubectl create namespace resume --dry-run=client -o yaml | /usr/local/bin/k3s kubectl apply -f -']
+  - /usr/local/bin/refresh-ecr
+  - systemctl enable --now resume-ecr.timer

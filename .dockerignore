@@ -1,0 +1,6 @@
+**
+!containers/
+!containers/nginx/
+!containers/nginx/**
+!dist/
+!dist/**

@@ -30,6 +30,7 @@ jobs:
           SITE_URL: https://${{ vars.DOMAIN_NAME }}
           DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
         run: |
-          export INSTANCE_ID=$(aws ec2 describe-instances --filters Name=tag:Project,Values=resume-website Name=instance-state-name,Values=running --query 'Reservations[].Instances[].InstanceId | [0]' --output text)
-          export DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items && contains(Aliases.Items, '$DOMAIN_NAME')].Id | [0]" --output text)
+          INSTANCE_ID=$(aws ec2 describe-instances --filters Name=tag:Project,Values=resume-website Name=instance-state-name,Values=running --query 'Reservations[].Instances[].InstanceId | [0]' --output text)
+          DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items && contains(Aliases.Items, '$DOMAIN_NAME')].Id | [0]" --output text)
+          export INSTANCE_ID DISTRIBUTION_ID
           bash scripts/deploy-release.sh

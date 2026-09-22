@@ -46,14 +46,21 @@ jobs:
       - run: bash scripts/install-tools.sh
       - run: python3 -m pip install -r requirements-ci.txt
       - run: make infra-check chart-check
-      - run: |
+      - name: Terraform lint
+        run: |
           tflint --init
           tflint --chdir=infra/bootstrap --config="$PWD/.tflint.hcl"
           tflint --chdir=infra/platform --config="$PWD/.tflint.hcl"
-          helm template resume charts/resume | kubeconform -strict -summary
+      - name: Kubernetes schema validation
+        run: helm template resume charts/resume | kubeconform -strict -summary
+      - name: Workflow lint with ShellCheck
+        run: |
+          shellcheck --version
           actionlint
-          trivy config --severity HIGH,CRITICAL --exit-code 1 --skip-dirs '**/.terraform' --skip-dirs node_modules --skip-dirs .artifacts .
-          trivy fs --scanners secret --exit-code 1 --skip-dirs node_modules --skip-dirs '**/.terraform' --skip-dirs .artifacts .
+      - name: Infrastructure security scan
+        run: trivy config --severity HIGH,CRITICAL --exit-code 1 --skip-dirs '**/.terraform' --skip-dirs node_modules --skip-dirs .artifacts .
+      - name: Secret scan
+        run: trivy fs --scanners secret --exit-code 1 --skip-dirs node_modules --skip-dirs '**/.terraform' --skip-dirs .artifacts .
   container:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

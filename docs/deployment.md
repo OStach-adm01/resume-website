@@ -8,6 +8,47 @@ Install AWS CLI v2, Terraform 1.16.1, Node.js from `.nvmrc`, Python 3, Helm 3.19
 
 Review the resource plan and current AWS pricing. Expect one `t4g.small`, 16 GiB gp3, one charged public IPv4, and two running web pods on the same host. ECR retains twenty images; S3 retains current release prefixes until you prune them. Use approximately 730 hours/month for an always-on node and IPv4 when calculating the baseline. Additional credits are not guaranteed.
 
+## Deployment checkpoint: 2026-09-22
+
+This is the handoff point for a later Codex session. Treat the entries below as historical evidence and re-check AWS, GitHub, DNS, and the local checkout before making a change.
+
+### Completed
+
+- AWS account `108327566685` is active. The owner reported a `$100` credit balance and confirmed the Free Plan expiry as `2027-03-22`. Root MFA is intentionally not enabled; do not state that it is enabled.
+- Local CLI access uses temporary console credentials: profile `resume-login` is the browser-login profile and `resume-terraform` is the `credential_process` profile Terraform uses. The verified caller was `arn:aws:iam::108327566685:user/resume-bootstrap`, not root. Never create or store AWS access keys.
+- Bootstrap Terraform was applied successfully: `21 added, 0 changed, 0 destroyed`. It created only the protected state bucket, GitHub OIDC provider, GitHub deployment roles, and the runtime permissions boundary. Platform resources have not been applied.
+- Bootstrap state was migrated to `s3://resume-website-108327566685-state/bootstrap/terraform.tfstate`. It was verified as private, SSE-S3 encrypted, versioned, and configured with the S3 lockfile backend. A local private state backup exists under `.artifacts/` and must not be committed.
+- Bootstrap outputs are:
+
+  | Output           | Value                                                              |
+  | ---------------- | ------------------------------------------------------------------ |
+  | State bucket     | `resume-website-108327566685-state`                                |
+  | Runtime boundary | `arn:aws:iam::108327566685:policy/resume-website-runtime-boundary` |
+  | Terraform role   | `arn:aws:iam::108327566685:role/resume-website-terraform`          |
+  | Publish role     | `arn:aws:iam::108327566685:role/resume-website-publish`            |
+  | Deploy role      | `arn:aws:iam::108327566685:role/resume-website-deploy`             |
+  | Drift role       | `arn:aws:iam::108327566685:role/resume-website-drift`              |
+
+- GitHub repository `OStach-adm01/resume-website` is public. Its `production` environment permits only `main`; repository variable `DEPLOY_ENABLED` is `false`. The `main` ruleset blocks deletion and force pushes, requires a pull request with zero approvals, and requires the `infrastructure`, `website`, and `container` checks to pass and be current.
+- CI passed for commit `cc32f0c0e8e0db3afa48bdf304216dbdeb066f87`; deployment was skipped because `DEPLOY_ENABLED=false`. The CI fix added ShellCheck to local tooling and corrected rollback command error handling.
+- Bootstrap remote-state changes were merged through PR #11 into `main` at commit `6982c0b`. The local deployment and drift workflow changes that read the Zone ID from secrets still need to be published and merged after CI passes.
+- The first local platform plan was reviewed: `59 to add, 0 to change, 0 to destroy`, targeting account `108327566685`, region `eu-central-1`, and expiry `2027-03-22`. No apply was performed. The saved plan is private and ignored by Git. A successful initial plan does not establish that the Cloudflare token can access the intended zone or that existing DNS records are conflict-free.
+- Baseline list pricing checked on 2026-09-22 is approximately `$19.19/month` at 730 hours: `$14.02` for `t4g.small`, `$1.52` for 16 GiB gp3, and `$3.65` for public IPv4. Storage beyond the root disk, requests, monitoring, traffic, and taxes are additional; credits are excluded. The configured `$20` budget is an alert threshold, not a spending cap.
+
+### Safe resume procedure
+
+1. Check the current branch, working tree, remote, and recent commits. Do not overwrite local ignored files such as `infra/bootstrap/backend.hcl`, `infra/bootstrap/terraform.tfvars`, or Terraform state.
+2. Check the active AWS identity with `aws sts get-caller-identity --profile resume-terraform`. It must be the intended non-root bootstrap identity in account `108327566685`.
+3. Confirm the remote bootstrap state object exists and is private, encrypted, and versioned. Run `terraform -chdir=infra/bootstrap init -backend-config=backend.hcl` followed by `terraform -chdir=infra/bootstrap plan`; require `No changes` before using any state output.
+4. Preserve local changes while updating from `main`; publish the Zone ID secret wiring through a pull request and require its CI checks to pass before merging. The generic `backend.tf` is safe to commit; `backend.hcl` is not.
+5. Keep `DEPLOY_ENABLED=false`. Verify Cloudflare access and the user-configured GitHub settings, then prepare a platform plan. Do not apply the platform module until its exact plan, account plan/expiry, current estimate, and Cloudflare configuration have been reviewed.
+
+### Secrets and data boundaries
+
+- Never put Cloudflare tokens, AWS credentials, backend files, state files, plans, the origin token, recruiter records, or PDF source files in Git, issue text, PR text, or public workflow logs.
+- Certificate image links remain owner-supplied and intentionally unverified by CI.
+- The owner purchased `olgierdstach.com` through Cloudflare and confirmed adding the requested GitHub secrets and variables, including the deployment and drift tokens, `CLOUDFLARE_ZONE_ID`, `ALERT_EMAIL`, and the `2027-03-22` expiry. This is owner-reported; authenticated GitHub settings verification remains pending. Keep the Zone ID out of committed files and repository variables; the local Terraform configuration is ignored by Git. No PDF version has been supplied.
+
 ## Bootstrap
 
 ### New account only: create the state bucket
@@ -86,7 +127,6 @@ Set these **repository variables** so reusable and scheduled workflow conditions
 | `AWS_REGION`           | `eu-central-1`                                    |
 | `STATE_BUCKET`         | Bootstrap state bucket                            |
 | `DOMAIN_NAME`          | Domain without scheme or path                     |
-| `CLOUDFLARE_ZONE_ID`   | The delegated zone identifier                     |
 | `RUNTIME_BOUNDARY_ARN` | Bootstrap output                                  |
 | `TERRAFORM_ROLE_ARN`   | Bootstrap `terraform` role                        |
 | `PUBLISH_ROLE_ARN`     | Bootstrap `publish` role                          |
@@ -95,7 +135,7 @@ Set these **repository variables** so reusable and scheduled workflow conditions
 | `FREE_PLAN_EXPIRES_ON` | Actual `YYYY-MM-DD` expiry                        |
 | `RESUME_VERSION`       | Empty until a PDF is published                    |
 
-Set these **production environment secrets**: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_READ_API_TOKEN`, and `ALERT_EMAIL`. No AWS secret access key is needed. Enable GitHub Actions issue creation so failed scheduled checks can open an issue.
+Set these **production environment secrets**: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_READ_API_TOKEN`, `CLOUDFLARE_ZONE_ID`, and `ALERT_EMAIL`. The Zone ID is stored as a secret at the owner's request so GitHub masks its value in workflow logs. No AWS secret access key is needed. Enable GitHub Actions issue creation so failed scheduled checks can open an issue.
 
 Public repository workflow logs are public. The pipeline does not publish Terraform state, saved plans, recruiter input, or AWS response bodies. GitHub masks configured secret values, but review logs before attaching screenshots to portfolio material.
 

@@ -1,0 +1,6 @@
+bucket              = "resume-website-REPLACE_ACCOUNT_ID-state"
+key                 = "bootstrap/terraform.tfstate"
+region              = "eu-central-1"
+encrypt             = true
+use_lockfile        = true
+allowed_account_ids = ["REPLACE_ACCOUNT_ID"]

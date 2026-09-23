@@ -141,6 +141,8 @@ Public repository workflow logs are public. The pipeline does not publish Terraf
 
 ## Release
 
+API Gateway deployment snapshots hash configured API behavior only. Switching from the legacy whole-resource hash requires one separately reviewed platform apply to replace the deployment snapshot and update the existing stage; the release deletion guard must remain enabled. Lambda archives include only `handler.py` with a fixed file mode, and ACM DNS names and targets are normalized without trailing dots to avoid refresh-only differences.
+
 Before enabling deployment, compare repository variables and any `production` environment overrides with the reviewed local configuration. In particular, `DOMAIN_NAME` must be the bare domain and `RUNTIME_BOUNDARY_ARN` must match the bootstrap output exactly. The release workflow rejects resource deletions/replacements and changes to existing IAM permissions boundaries. Review and apply intentional changes of those kinds separately before releasing; do not bypass the check to fix misconfigured variables.
 
 Merge a tested change into `main`. CI completes before deployment. The deployment job applies the current configuration, builds the site with its Git SHA and optional PDF version, scans/publishes an ARM64 image, and publishes the manifest last. Helm runs via SSM with the exact immutable release. A retry can reuse an identical published release.

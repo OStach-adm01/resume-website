@@ -32,8 +32,8 @@ resource "aws_acm_certificate" "site" {
 resource "cloudflare_dns_record" "validation" {
   for_each = toset([var.domain_name, "www.${var.domain_name}"])
   zone_id  = var.cloudflare_zone_id
-  name     = one([for dvo in aws_acm_certificate.site.domain_validation_options : dvo.resource_record_name if dvo.domain_name == each.value])
-  content  = one([for dvo in aws_acm_certificate.site.domain_validation_options : dvo.resource_record_value if dvo.domain_name == each.value])
+  name     = trimsuffix(one([for dvo in aws_acm_certificate.site.domain_validation_options : dvo.resource_record_name if dvo.domain_name == each.value]), ".")
+  content  = trimsuffix(one([for dvo in aws_acm_certificate.site.domain_validation_options : dvo.resource_record_value if dvo.domain_name == each.value]), ".")
   type     = "CNAME"
   ttl      = 60
   proxied  = false

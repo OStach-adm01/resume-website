@@ -30,9 +30,12 @@ resource "aws_iam_role_policy" "lambda" {
   ] })
 }
 data "archive_file" "lambda" {
-  type        = "zip"
-  source_dir  = "${path.module}/../../backend/recruiter"
-  excludes    = ["__pycache__"]
+  type             = "zip"
+  output_file_mode = "0644"
+  source {
+    content  = file("${path.module}/../../backend/recruiter/handler.py")
+    filename = "handler.py"
+  }
   output_path = "${path.module}/.terraform/recruiter.zip"
 }
 resource "aws_lambda_function" "recruiter" {
@@ -101,7 +104,24 @@ resource "aws_lambda_permission" "api" {
 }
 resource "aws_api_gateway_deployment" "main" {
   rest_api_id = aws_api_gateway_rest_api.recruiter.id
-  triggers    = { redeployment = sha1(jsonencode([aws_api_gateway_model.request.schema, aws_api_gateway_method.post, aws_api_gateway_integration.lambda])) }
+  # Hash only configured API behavior, not provider-populated IDs or empty defaults.
+  triggers = { redeployment = sha1(jsonencode({
+    schema = aws_api_gateway_model.request.schema
+    method = {
+      path                = "/api/recruiter-interest"
+      http_method         = aws_api_gateway_method.post.http_method
+      authorization       = aws_api_gateway_method.post.authorization
+      request_models      = aws_api_gateway_method.post.request_models
+      request_parameters  = aws_api_gateway_method.post.request_parameters
+      validate_body       = aws_api_gateway_request_validator.request.validate_request_body
+      validate_parameters = aws_api_gateway_request_validator.request.validate_request_parameters
+    }
+    integration = {
+      http_method = aws_api_gateway_integration.lambda.integration_http_method
+      type        = aws_api_gateway_integration.lambda.type
+      uri         = aws_api_gateway_integration.lambda.uri
+    }
+  })) }
   lifecycle { create_before_destroy = true }
 }
 resource "aws_api_gateway_stage" "prod" {

@@ -23,6 +23,7 @@ jobs:
       TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
       TF_VAR_runtime_boundary_arn: ${{ vars.RUNTIME_BOUNDARY_ARN }}
       TF_VAR_free_plan_expires_on: ${{ vars.FREE_PLAN_EXPIRES_ON }}
+      TF_VAR_resume_version: ${{ vars.RESUME_VERSION }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_READ_API_TOKEN }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683

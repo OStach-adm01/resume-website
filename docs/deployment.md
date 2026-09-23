@@ -2,6 +2,8 @@
 
 ## Prerequisites
 
+For the September 23 content/CAPTCHA update, follow [Resume download activation](resume-download.md). The older checkpoint below is historical; the owner has since reported a working deployment. Do not treat its "platform not applied" statements as current state.
+
 Use a dedicated AWS lab account. Enable root MFA, use a non-root administrative session for bootstrap, and record the actual Free Plan expiry. Buy the domain separately and delegate it to Cloudflare DNS. The project uses DNS-only records and CloudFront pay-as-you-go distribution configuration; AWS account Free Plan is a separate concept.
 
 Install AWS CLI v2, Terraform 1.16.1, Node.js from `.nvmrc`, Python 3, Helm 3.19.0, and Git. Authenticate locally with temporary credentials. Confirm `aws sts get-caller-identity` matches the intended account before applying anything.

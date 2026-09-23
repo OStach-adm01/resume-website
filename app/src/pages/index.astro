@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import { certificates } from '../data/certificates';
 const release = import.meta.env.PUBLIC_RELEASE_SHA || 'local-development';
 const resumeVersion = import.meta.env.PUBLIC_RESUME_VERSION || '';
+const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
 ---
 
 <Layout>
@@ -29,8 +30,9 @@ const resumeVersion = import.meta.env.PUBLIC_RESUME_VERSION || '';
           <button
             id="download-resume"
             class="button primary"
-            disabled={!resumeVersion}
+            disabled={!resumeVersion || !siteKey}
             data-version={resumeVersion}
+            data-site-key={siteKey}
           >
             Download resume <span aria-hidden="true">↓</span>
           </button>
@@ -38,7 +40,7 @@ const resumeVersion = import.meta.env.PUBLIC_RESUME_VERSION || '';
             Explore the build <span aria-hidden="true">↗</span>
           </a>
         </div>
-        {!resumeVersion && (
+        {(!resumeVersion || !siteKey) && (
           <p class="availability">Resume PDF will be published soon.</p>
         )}
         <div class="skills" aria-label="Project technologies">
@@ -187,8 +189,8 @@ const resumeVersion = import.meta.env.PUBLIC_RESUME_VERSION || '';
               <img
                 src={cert.image}
                 alt={`${cert.title} completion certificate`}
-                width="720"
-                height="556"
+                width="1772"
+                height="928"
                 loading="lazy"
               />
               <span class="image-link" aria-hidden="true">
@@ -272,6 +274,15 @@ const resumeVersion = import.meta.env.PUBLIC_RESUME_VERSION || '';
           <a href="/privacy/">Privacy details</a>.
         </p>
       </div>
+      <div
+        id="turnstile-widget"
+        role="group"
+        aria-label="Download security check"
+      ></div>
+      <p class="privacy-note">
+        Protected by Cloudflare Turnstile.{' '}
+        <a href="/privacy/">Privacy details</a>.
+      </p>
       <p id="download-status" role="status" aria-live="polite"></p>
       <button class="button primary" id="confirm-download" type="submit">
         Continue to download ↓

@@ -26,6 +26,8 @@ resource "aws_iam_role_policy" "lambda" {
   role = aws_iam_role.lambda.id
   policy = jsonencode({ Version = "2012-10-17", Statement = [
     { Effect = "Allow", Action = "dynamodb:PutItem", Resource = aws_dynamodb_table.recruiters.arn },
+    { Effect = "Allow", Action = "ssm:GetParameter", Resource = "arn:aws:ssm:${var.region}:${local.account}:parameter/${local.name}/turnstile-secret" },
+    { Effect = "Allow", Action = "s3:GetObject", Resource = "${aws_s3_bucket.artifacts.arn}/resume/${var.resume_version == "" ? "disabled" : var.resume_version}/resume.pdf" },
     { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = "${aws_cloudwatch_log_group.lambda.arn}:*" }
   ] })
 }
@@ -37,6 +39,10 @@ data "archive_file" "lambda" {
     filename = "handler.py"
   }
   output_path = "${path.module}/.terraform/recruiter.zip"
+  source {
+    content  = file("${path.module}/../../backend/recruiter/download.py")
+    filename = "download.py"
+  }
 }
 resource "aws_lambda_function" "recruiter" {
   function_name                  = "${local.name}-recruiter"
@@ -46,10 +52,18 @@ resource "aws_lambda_function" "recruiter" {
   architectures                  = ["arm64"]
   filename                       = data.archive_file.lambda.output_path
   source_code_hash               = data.archive_file.lambda.output_base64sha256
-  timeout                        = 5
+  timeout                        = 20
   memory_size                    = 128
   reserved_concurrent_executions = var.lambda_concurrency
-  environment { variables = { TABLE_NAME = aws_dynamodb_table.recruiters.name } }
+  environment {
+    variables = {
+      TABLE_NAME                 = aws_dynamodb_table.recruiters.name
+      ARTIFACTS_BUCKET           = aws_s3_bucket.artifacts.id
+      RESUME_VERSION             = var.resume_version
+      SITE_DOMAIN                = var.domain_name
+      TURNSTILE_SECRET_PARAMETER = "/${local.name}/turnstile-secret"
+    }
+  }
   depends_on = [aws_iam_role_policy.lambda, aws_cloudwatch_log_group.lambda]
 }
 resource "aws_api_gateway_rest_api" "recruiter" {
@@ -104,9 +118,16 @@ resource "aws_lambda_permission" "api" {
 }
 resource "aws_api_gateway_deployment" "main" {
   rest_api_id = aws_api_gateway_rest_api.recruiter.id
+  depends_on  = [aws_api_gateway_integration.download]
   # Hash only configured API behavior, not provider-populated IDs or empty defaults.
   triggers = { redeployment = sha1(jsonencode({
     schema = aws_api_gateway_model.request.schema
+    download = {
+      path   = aws_api_gateway_resource.download.path_part
+      method = aws_api_gateway_method.download.http_method
+      type   = aws_api_gateway_integration.download.type
+      uri    = aws_api_gateway_integration.download.uri
+    }
     method = {
       path                = "/api/recruiter-interest"
       http_method         = aws_api_gateway_method.post.http_method
@@ -123,6 +144,32 @@ resource "aws_api_gateway_deployment" "main" {
     }
   })) }
   lifecycle { create_before_destroy = true }
+}
+resource "aws_api_gateway_resource" "download" {
+  rest_api_id = aws_api_gateway_rest_api.recruiter.id
+  parent_id   = aws_api_gateway_resource.api.id
+  path_part   = "resume-download"
+}
+resource "aws_api_gateway_method" "download" {
+  rest_api_id   = aws_api_gateway_rest_api.recruiter.id
+  resource_id   = aws_api_gateway_resource.download.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+resource "aws_api_gateway_integration" "download" {
+  rest_api_id             = aws_api_gateway_rest_api.recruiter.id
+  resource_id             = aws_api_gateway_resource.download.id
+  http_method             = aws_api_gateway_method.download.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.recruiter.invoke_arn
+}
+resource "aws_lambda_permission" "download" {
+  statement_id  = "AllowResumeDownloadRoute"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.recruiter.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.recruiter.execution_arn}/*/POST/api/resume-download"
 }
 resource "aws_api_gateway_stage" "prod" {
   rest_api_id   = aws_api_gateway_rest_api.recruiter.id

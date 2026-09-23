@@ -16,7 +16,7 @@ const { title = 'Olgierd Stach — Infrastructure, built with intent.' } =
       name="description"
       content="Olgierd Stach's engineering portfolio. Explore the infrastructure, automation, and verified learning behind this website."
     />
-    <meta name="theme-color" content="#101716" />
+    <meta name="theme-color" content="#101725" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title}</title>
   </head>
@@ -31,6 +31,14 @@ const { title = 'Olgierd Stach — Infrastructure, built with intent.' } =
       <nav aria-label="Main navigation">
         <a href="/#work">Engineering</a>
         <a href="/#certificates">Credentials</a>
+        <a
+          href="/projects/"
+          aria-current={
+            Astro.url.pathname === '/projects/' ? 'page' : undefined
+          }
+        >
+          Projects
+        </a>
         <a
           class="nav-github"
           href="https://github.com/OStach-adm01"

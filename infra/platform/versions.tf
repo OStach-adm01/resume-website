@@ -26,6 +26,14 @@ variable "domain_name" { type = string }
 variable "cloudflare_zone_id" { type = string }
 variable "alert_email" { type = string }
 variable "runtime_boundary_arn" { type = string }
+variable "resume_version" {
+  type    = string
+  default = ""
+  validation {
+    condition     = var.resume_version == "" || can(regex("^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$", var.resume_version))
+    error_message = "Use a safe immutable resume version, or leave empty to disable downloads."
+  }
+}
 variable "free_plan_expires_on" {
   type = string
   validation {

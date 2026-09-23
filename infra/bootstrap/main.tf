@@ -84,7 +84,7 @@ resource "aws_iam_policy" "runtime_boundary" {
     { Effect = "Allow", Action = ["s3:GetObject", "s3:GetObjectVersion", "s3:ListBucket"], Resource = ["arn:aws:s3:::${local.name}-${local.account}-artifacts", "arn:aws:s3:::${local.name}-${local.account}-artifacts/*"] },
     { Effect = "Allow", Action = ["dynamodb:PutItem"], Resource = "arn:aws:dynamodb:${var.region}:${local.account}:table/${local.name}-recruiters" },
     { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = "arn:aws:logs:*:${local.account}:log-group:/aws/lambda/${local.name}-recruiter:*" },
-    { Effect = "Allow", Action = ["ssm:GetParameter"], Resource = "arn:aws:ssm:${var.region}:${local.account}:parameter/${local.name}/origin-token" },
+    { Effect = "Allow", Action = ["ssm:GetParameter"], Resource = ["arn:aws:ssm:${var.region}:${local.account}:parameter/${local.name}/origin-token", "arn:aws:ssm:${var.region}:${local.account}:parameter/${local.name}/turnstile-secret"] },
     { Effect = "Allow", Action = ["ecr:GetAuthorizationToken", "ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability", "ssm:UpdateInstanceInformation", "ssmmessages:CreateControlChannel", "ssmmessages:CreateDataChannel", "ssmmessages:OpenControlChannel", "ssmmessages:OpenDataChannel"], Resource = "*" }
   ] })
 }

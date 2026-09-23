@@ -18,14 +18,25 @@ import Layout from '../layouts/Layout.astro';
     </p>
     <p>
       The record expires after 30 days. DynamoDB deletes expired records
-      asynchronously, typically within a few days. Selecting No downloads the
-      resume without sending the form to the API.
+      asynchronously, typically within a few days. Selecting No does not create
+      a recruiting-interest record. Both options require a security check before
+      the download API returns the PDF.
     </p>
     <p>
       The application does not store your IP address, browser information, email
       address, or name. Infrastructure providers necessarily process connection
       information to deliver the website. Application logs do not include
       submitted company names or request bodies.
+    </p>
+    <p>
+      Opening the download dialog loads Cloudflare Turnstile to help prevent
+      automated downloads. Cloudflare processes browser and connection
+      information for this check. The backend verifies its short-lived token;
+      the application does not store that token. See{' '}
+      <a href="https://www.cloudflare.com/privacypolicy/">
+        Cloudflare's privacy policy
+      </a>
+      .
     </p>
     <p>
       Certificate images are served by this website. Following a verification

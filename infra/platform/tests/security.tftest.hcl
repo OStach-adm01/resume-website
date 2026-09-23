@@ -17,17 +17,22 @@ variables {
   free_plan_expires_on = "2027-01-01"
 }
 override_resource {
-  target = aws_acm_certificate.site
+  target          = aws_acm_certificate.site
+  override_during = plan
   values = {
     arn = "arn:aws:acm:us-east-1:123456789012:certificate/00000000-0000-0000-0000-000000000000"
     domain_validation_options = [
-      { domain_name = "example.com", resource_record_name = "_test.example.com", resource_record_type = "CNAME", resource_record_value = "_test.acm-validations.aws" },
-      { domain_name = "www.example.com", resource_record_name = "_www.example.com", resource_record_type = "CNAME", resource_record_value = "_www.acm-validations.aws" }
+      { domain_name = "example.com", resource_record_name = "_test.example.com.", resource_record_type = "CNAME", resource_record_value = "_test.acm-validations.aws." },
+      { domain_name = "www.example.com", resource_record_name = "_www.example.com.", resource_record_type = "CNAME", resource_record_value = "_www.acm-validations.aws." }
     ]
   }
 }
 run "security_contract" {
   command = plan
+  assert {
+    condition     = alltrue([for record in cloudflare_dns_record.validation : !endswith(record.name, ".") && !endswith(record.content, ".")])
+    error_message = "ACM validation names and targets must match Cloudflare's dotless representation."
+  }
   assert {
     condition     = aws_s3_bucket_public_access_block.artifacts.block_public_acls && aws_s3_bucket_public_access_block.artifacts.block_public_policy && aws_s3_bucket_public_access_block.artifacts.ignore_public_acls && aws_s3_bucket_public_access_block.artifacts.restrict_public_buckets
     error_message = "Artifact storage must never be public."

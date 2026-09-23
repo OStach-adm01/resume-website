@@ -47,6 +47,8 @@ jobs:
       - run: python3 -m pip install -r requirements-ci.txt
       - run: make infra-check chart-check
       - name: Terraform lint
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           tflint --init
           tflint --chdir=infra/bootstrap --config="$PWD/.tflint.hcl"

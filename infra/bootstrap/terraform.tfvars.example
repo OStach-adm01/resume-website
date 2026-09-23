@@ -1,3 +1,5 @@
-state_bucket_name = "resume-website-REPLACE_ACCOUNT_ID-state"
-github_repository = "OStach-adm01/resume-website"
-region            = "eu-central-1"
+state_bucket_name     = "resume-website-REPLACE_ACCOUNT_ID-state"
+github_repository    = "OStach-adm01/resume-website"
+github_owner_id      = "307522145"
+github_repository_id = "1381486564"
+region               = "eu-central-1"

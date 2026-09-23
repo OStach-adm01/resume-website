@@ -19,7 +19,7 @@ override_resource {
 run "github_identity_and_state_boundaries" {
   command = apply
   assert {
-    condition     = alltrue([for role in aws_iam_role.github : jsondecode(role.assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:sub"] == "repo:OStach-adm01/resume-website:environment:production"])
+    condition     = alltrue([for role in aws_iam_role.github : jsondecode(role.assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:sub"] == "repo:OStach-adm01@307522145/resume-website@1381486564:environment:production"])
     error_message = "Every role must require the exact production environment subject."
   }
   assert {

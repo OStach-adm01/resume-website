@@ -12,7 +12,8 @@ test -s dist/index.html
 mkdir -p .artifacts
 helm package charts/resume --destination .artifacts
 # An existing manifest marks a completed, immutable release. Never rewrite it.
-existing=$(aws s3api list-objects-v2 --bucket "$ARTIFACTS_BUCKET" --prefix "releases/$RELEASE_SHA/manifest.json" --query KeyCount --output text)
+# Paginated CLI responses may omit KeyCount, including for an empty prefix.
+existing=$(aws s3api list-objects-v2 --bucket "$ARTIFACTS_BUCKET" --prefix "releases/$RELEASE_SHA/manifest.json" --output json | python3 -c 'import json,os,sys; key="releases/"+os.environ["RELEASE_SHA"]+"/manifest.json"; print(int(any(item["Key"] == key for item in json.load(sys.stdin).get("Contents", []))))')
 if [[ "$existing" != 0 ]]; then
   aws s3 cp "s3://$ARTIFACTS_BUCKET/releases/$RELEASE_SHA/manifest.json" .artifacts/existing-manifest.json --only-show-errors
   python3 -c 'import json,os; m=json.load(open(".artifacts/existing-manifest.json")); assert m["imageDigest"]==os.environ["IMAGE_DIGEST"] and m["resumeVersion"]==os.environ["RESUME_VERSION"], "Existing release differs; create a new commit"'

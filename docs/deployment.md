@@ -141,6 +141,8 @@ Public repository workflow logs are public. The pipeline does not publish Terraf
 
 ## Release
 
+Before enabling deployment, compare repository variables and any `production` environment overrides with the reviewed local configuration. In particular, `DOMAIN_NAME` must be the bare domain and `RUNTIME_BOUNDARY_ARN` must match the bootstrap output exactly. The release workflow rejects resource deletions/replacements and changes to existing IAM permissions boundaries. Review and apply intentional changes of those kinds separately before releasing; do not bypass the check to fix misconfigured variables.
+
 Merge a tested change into `main`. CI completes before deployment. The deployment job applies the current configuration, builds the site with its Git SHA and optional PDF version, scans/publishes an ARM64 image, and publishes the manifest last. Helm runs via SSM with the exact immutable release. A retry can reuse an identical published release.
 
 If a live smoke test fails after rollout, the workflow fails visibly. Helm automatically rolls back a failed Kubernetes rollout, but a failed external smoke test does not automatically revert unrelated infrastructure. Use the Rollback workflow to select a known-good SHA.

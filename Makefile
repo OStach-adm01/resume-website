@@ -15,6 +15,7 @@ check:
 	npm run test:api
 	npm run test:e2e
 infra-check:
+	python3 -m unittest discover -s scripts -p 'test_check_deploy_plan.py'
 	terraform fmt -check -recursive infra
 	terraform -chdir=infra/bootstrap init -backend=false
 	terraform -chdir=infra/bootstrap validate

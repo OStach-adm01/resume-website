@@ -17,7 +17,8 @@ variables {
   free_plan_expires_on = "2027-01-01"
 }
 override_resource {
-  target = aws_acm_certificate.site
+  target          = aws_acm_certificate.site
+  override_during = plan
   values = {
     arn = "arn:aws:acm:us-east-1:123456789012:certificate/00000000-0000-0000-0000-000000000000"
     domain_validation_options = [

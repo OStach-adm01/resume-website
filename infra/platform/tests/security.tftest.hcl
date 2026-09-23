@@ -57,4 +57,12 @@ run "security_contract" {
     condition     = aws_cloudwatch_log_group.lambda.retention_in_days == 7
     error_message = "Application logs must have bounded retention."
   }
+  assert {
+    condition     = aws_api_gateway_resource.download.path_part == "resume-download" && aws_api_gateway_method.download.http_method == "POST" && aws_lambda_function.recruiter.environment[0].variables.RESUME_VERSION == ""
+    error_message = "The protected download route must be POST-only and disabled until a PDF version is configured."
+  }
+  assert {
+    condition     = aws_lambda_function.recruiter.environment[0].variables.TURNSTILE_SECRET_PARAMETER == "/resume-website/turnstile-secret" && !contains(keys(aws_lambda_function.recruiter.environment[0].variables), "TURNSTILE_SECRET_KEY")
+    error_message = "Pass only the SSM parameter name, never a Turnstile secret value."
+  }
 }

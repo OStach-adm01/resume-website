@@ -1,4 +1,5 @@
 import { normalizeCompany, validCompany } from '../lib/recruiter';
+import { loadTurnstile } from '../lib/turnstile';
 
 const trigger = document.querySelector<HTMLButtonElement>('#download-resume')!;
 const dialog = document.querySelector<HTMLDialogElement>('#recruiter-dialog')!;
@@ -10,6 +11,47 @@ const status =
 const submit = document.querySelector<HTMLButtonElement>('#confirm-download')!;
 let requestId = '';
 let pending = false;
+let token = '';
+let widget: string | undefined;
+
+async function securityCheck() {
+  token = '';
+  submit.disabled = true;
+  try {
+    const turnstile = await loadTurnstile();
+    if (widget !== undefined) {
+      turnstile.reset(widget);
+      return;
+    }
+    widget = turnstile.render(
+      document.querySelector<HTMLElement>('#turnstile-widget')!,
+      {
+        sitekey: trigger.dataset.siteKey!,
+        action: 'resume-download',
+        theme: 'dark',
+        size: 'flexible',
+        callback: (value) => {
+          token = value;
+          submit.disabled = pending;
+        },
+        'expired-callback': () => {
+          token = '';
+          submit.disabled = true;
+          status.textContent = 'Security check expired. Please verify again.';
+        },
+        'error-callback': () => {
+          token = '';
+          submit.disabled = true;
+          status.textContent =
+            'Security check failed. Close this dialog and try again.';
+        },
+      },
+    );
+  } catch {
+    status.textContent =
+      'Security check unavailable. Close this dialog and try again.';
+  }
+}
 
 trigger.addEventListener('click', () => {
   form.reset();
@@ -18,6 +60,7 @@ trigger.addEventListener('click', () => {
   status.textContent = '';
   requestId = crypto.randomUUID();
   dialog.showModal();
+  void securityCheck();
 });
 document.querySelector('.close-dialog')?.addEventListener('click', () => {
   if (!pending) dialog.close();
@@ -34,7 +77,7 @@ form.addEventListener('change', () => {
 company.addEventListener('input', () => company.setCustomValidity(''));
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
-  if (pending || !trigger.dataset.version) return;
+  if (pending || !trigger.dataset.version || !token) return;
   const yes = new FormData(form).get('recruiter') === 'yes';
   if (yes && !validCompany(company.value)) {
     company.setCustomValidity(
@@ -63,17 +106,36 @@ form.addEventListener('submit', async (event) => {
       if (!response.ok) throw new Error('Request failed');
     }
     const link = document.createElement('a');
-    link.href = `/resume/${encodeURIComponent(trigger.dataset.version)}/resume.pdf`;
+    status.textContent = 'Verifying and preparing your download…';
+    const response = await fetch('/api/resume-download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+      signal: AbortSignal.timeout(25000),
+    });
+    token = '';
+    if (!response.ok) throw new Error('Download failed');
+    const data = await response.json();
+    const bytes = Uint8Array.from(atob(data.pdf), (character) =>
+      character.charCodeAt(0),
+    );
+    const url = URL.createObjectURL(
+      new Blob([bytes], { type: 'application/pdf' }),
+    );
+    link.href = url;
     link.download = 'Olgierd-Stach-Resume.pdf';
     document.body.append(link);
     link.click();
     link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
     dialog.close();
   } catch {
     status.textContent =
-      'We could not save your request. Please try again. Your download has not started.';
+      'We could not complete your request. Please verify again and retry. Your download has not started.';
+    token = '';
+    if (widget !== undefined) window.turnstile?.reset(widget);
   } finally {
     pending = false;
-    submit.disabled = false;
+    submit.disabled = !token;
   }
 });

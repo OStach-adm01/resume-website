@@ -1,12 +1,12 @@
 :root {
   font-family: Arial, Helvetica, sans-serif;
-  color: #eef1eb;
-  background: #101716;
+  color: #edf2fc;
+  background: #101725;
   font-synthesis: none;
-  --muted: #a4afa7;
-  --accent: #bbf49b;
-  --border: #35413a;
-  --surface: #18211d;
+  --muted: #a8b6cc;
+  --accent: #91c9ff;
+  --border: #34435d;
+  --surface: #172238;
   scroll-behavior: smooth;
 }
 * {
@@ -111,7 +111,7 @@ h1 em {
 .intro {
   font-size: 19px;
   line-height: 1.65;
-  color: #c8d0c8;
+  color: #c8d3e5;
   max-width: 510px;
 }
 .intro strong {
@@ -142,7 +142,7 @@ h1 em {
 }
 .primary {
   background: var(--accent);
-  color: #13210e;
+  color: #102338;
 }
 .text-link {
   font-size: 14px;
@@ -159,15 +159,15 @@ h1 em {
 }
 .skills span {
   font-size: 11px;
-  color: #cad4cb;
+  color: #cbd7eb;
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 7px 9px;
 }
 .terminal {
-  border: 1px solid #3b4d3f;
+  border: 1px solid #3b4e6c;
   border-radius: 10px;
-  background: linear-gradient(150deg, #202c24, #141d18);
+  background: linear-gradient(150deg, #202f49, #141e31);
   box-shadow: 0 24px 80px #0003;
   transform: rotate(1deg);
 }
@@ -189,7 +189,7 @@ h1 em {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #5e6e60;
+  background: #5e7191;
 }
 .terminal-body {
   padding: 29px;
@@ -221,7 +221,7 @@ h1 em {
 .step-number {
   font-family: monospace;
   font-size: 11px;
-  border: 1px solid #506249;
+  border: 1px solid #4d6487;
   border-radius: 4px;
   width: 30px;
   height: 30px;
@@ -256,7 +256,7 @@ h1 em {
 }
 .work-section {
   border-block: 1px solid var(--border);
-  background: #151e19;
+  background: #151f33;
   padding: 77px 0;
 }
 .section-heading {
@@ -285,7 +285,7 @@ h2 {
   gap: 24px;
 }
 .feature-grid article {
-  border-top: 1px solid #405044;
+  border-top: 1px solid #405477;
   padding: 29px 15px 20px 0;
 }
 .feature-icon {
@@ -309,7 +309,7 @@ h3 {
   display: block;
   font-family: monospace;
   font-size: 10px;
-  color: #bec9bc;
+  color: #bfcee5;
   letter-spacing: 0.6px;
   margin-top: 25px;
 }
@@ -346,8 +346,8 @@ h3 {
 .certificate-image {
   display: block;
   position: relative;
-  border: 1px solid #57604e;
-  background: #f4f3eb;
+  border: 1px solid #536986;
+  background: #f2f6fc;
   padding: 12px;
   border-radius: 5px;
   overflow: hidden;
@@ -368,7 +368,7 @@ h3 {
   bottom: 10px;
   right: 10px;
   border-radius: 3px;
-  background: #17231b;
+  background: #182840;
   color: var(--accent);
   padding: 6px 9px;
 }
@@ -431,16 +431,16 @@ h3 {
   font-size: 42px;
 }
 .prose p {
-  color: #c3cec4;
+  color: #c4d2e9;
   line-height: 1.9;
 }
 .prose a:not(.button) {
   text-decoration: underline;
 }
 dialog {
-  border: 1px solid #55694e;
-  background: #18211d;
-  color: #eef1eb;
+  border: 1px solid #4c698e;
+  background: #172238;
+  color: #edf2fc;
   border-radius: 12px;
   padding: 40px;
   width: min(500px, calc(100% - 32px));
@@ -481,14 +481,14 @@ input[type='radio'] {
   width: 100%;
   margin-top: 10px;
   padding: 12px;
-  border: 1px solid #70806b;
+  border: 1px solid #6c83a5;
   border-radius: 4px;
-  background: #101716;
+  background: #101725;
   color: white;
 }
 .dialog-intro,
 .privacy-note {
-  color: #c2cbbf;
+  color: #c1cee3;
   font-size: 13px;
   line-height: 1.7;
 }

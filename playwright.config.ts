@@ -10,6 +10,9 @@ export default defineConfig({
     command: 'npm run build && npm run preview -- --ignore-lock --port 4323',
     url: 'http://127.0.0.1:4323',
     reuseExistingServer: false,
-    env: { PUBLIC_RESUME_VERSION: 'test-v1' },
+    env: {
+      PUBLIC_RESUME_VERSION: 'test-v1',
+      PUBLIC_TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
+    },
   },
 });

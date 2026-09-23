@@ -23,6 +23,9 @@ def response(status, message):
 
 
 def handler(event, _context):
+    if event.get("resource") == "/api/resume-download":
+        from download import handler as download_handler
+        return download_handler(event)
     if event.get("httpMethod") != "POST":
         return response(405, "Method not allowed")
     headers = {k.lower(): v for k, v in (event.get("headers") or {}).items()}

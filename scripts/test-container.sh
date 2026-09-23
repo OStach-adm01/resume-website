@@ -8,6 +8,8 @@ fixture=$(mktemp -d /tmp/resume-nginx-test.XXXXXX)
 mkdir -p "$fixture/site" "$fixture/config" "$fixture/origin"
 cp tests/fixtures/index.html "$fixture/site/index.html"
 cp tests/fixtures/404.html "$fixture/site/404.html"
+mkdir -p "$fixture/site/resume/test"
+cp tests/fixtures/index.html "$fixture/site/resume/test/resume.pdf"
 cp tests/fixtures/allow.conf "$fixture/origin/allow.conf"
 origin_token=$(python3 -c 'import shlex; print(shlex.split(open("tests/fixtures/allow.conf").read())[0])')
 [[ "$origin_token" =~ ^[a-zA-Z0-9]{48}$ ]] || { echo 'Fixture must use a production-length origin token' >&2; exit 1; }
@@ -24,4 +26,5 @@ done
 content=$(curl --fail --silent --show-error -H "X-Origin-Token: $origin_token" "http://127.0.0.1:$port/")
 [[ "$content" == *fixture* ]]
 [[ $(curl --silent --output /dev/null --write-out '%{http_code}' -H "X-Origin-Token: $origin_token" "http://127.0.0.1:$port/missing") == 404 ]]
+[[ $(curl --silent --output /dev/null --write-out '%{http_code}' -H "X-Origin-Token: $origin_token" "http://127.0.0.1:$port/resume/test/resume.pdf") == 404 ]]
 echo 'Nginx readiness, origin gate, content, and 404 passed.'

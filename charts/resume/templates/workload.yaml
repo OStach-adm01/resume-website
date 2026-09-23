@@ -33,10 +33,8 @@ data:
         try_files $uri =404;
       }
       location ^~ /resume/ {
-        if ($origin_allowed = 0) { return 403; }
-        add_header Content-Disposition 'attachment; filename="Olgierd-Stach-Resume.pdf"';
-        add_header Cache-Control "private, no-store";
-        try_files $uri =404;
+        # PDFs are returned only by the CAPTCHA-protected download API.
+        return 404;
       }
       location / {
         if ($origin_allowed = 0) { return 403; }
@@ -81,15 +79,9 @@ spec:
             - |
               aws s3 sync "s3://$BUCKET/releases/$RELEASE_SHA/site/" /site/ --only-show-errors
               test -s /site/index.html
-              if [ -n "$RESUME_VERSION" ]; then
-                mkdir -p "/site/resume/$RESUME_VERSION" /site/resume/latest
-                aws s3 cp "s3://$BUCKET/resume/$RESUME_VERSION/resume.pdf" "/site/resume/$RESUME_VERSION/resume.pdf" --only-show-errors
-                cp "/site/resume/$RESUME_VERSION/resume.pdf" /site/resume/latest/resume.pdf
-              fi
           env:
             - { name: BUCKET, value: {{ .Values.bucket | quote }} }
             - { name: RELEASE_SHA, value: {{ .Values.releaseSha | quote }} }
-            - { name: RESUME_VERSION, value: {{ .Values.resumeVersion | quote }} }
             - { name: AWS_DEFAULT_REGION, value: {{ .Values.region | quote }} }
             - { name: HOME, value: /tmp }
           securityContext:

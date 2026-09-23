@@ -10,6 +10,8 @@ metadata:
   name: resume-nginx-{{ .Values.releaseSha | trunc 12 }}
 data:
   site.conf: |
+    # The production origin token is 48 characters; the default bucket is too small.
+    map_hash_bucket_size 128;
     map $http_x_origin_token $origin_allowed {
       default 0;
       include /etc/nginx/origin/allow.conf;

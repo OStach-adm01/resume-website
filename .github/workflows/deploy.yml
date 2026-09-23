@@ -40,6 +40,7 @@ jobs:
         run: |
           terraform -chdir=infra/platform init -input=false -backend-config="bucket=$STATE_BUCKET" -backend-config="key=platform/terraform.tfstate" -backend-config="region=$AWS_REGION" -backend-config=encrypt=true
           terraform -chdir=infra/platform plan -input=false -out=deploy.tfplan
+          terraform -chdir=infra/platform show -json deploy.tfplan | python3 scripts/check_deploy_plan.py
           terraform -chdir=infra/platform apply -input=false deploy.tfplan
           terraform -chdir=infra/platform output -json | python3 scripts/outputs-env.py >> "$GITHUB_ENV"
       - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4

@@ -13,12 +13,31 @@ variable "github_repository" {
   type    = string
   default = "OStach-adm01/resume-website"
 }
+variable "github_owner_id" {
+  description = "Immutable GitHub owner ID used in the OIDC subject."
+  type        = string
+  default     = "307522145"
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_owner_id))
+    error_message = "Set the numeric GitHub owner ID."
+  }
+}
+variable "github_repository_id" {
+  description = "Immutable GitHub repository ID used in the OIDC subject."
+  type        = string
+  default     = "1381486564"
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_repository_id))
+    error_message = "Set the numeric GitHub repository ID."
+  }
+}
 variable "state_bucket_name" { type = string }
 data "aws_caller_identity" "current" {}
 locals {
-  name    = "resume-website"
-  account = data.aws_caller_identity.current.account_id
-  tags    = { Project = local.name, ManagedBy = "Terraform" }
+  github_oidc_subject = "repo:${split("/", var.github_repository)[0]}@${var.github_owner_id}/${split("/", var.github_repository)[1]}@${var.github_repository_id}:environment:production"
+  name                = "resume-website"
+  account             = data.aws_caller_identity.current.account_id
+  tags                = { Project = local.name, ManagedBy = "Terraform" }
 }
 resource "aws_s3_bucket" "state" {
   bucket = var.state_bucket_name
@@ -56,7 +75,7 @@ resource "aws_iam_openid_connect_provider" "github" {
 resource "aws_iam_role" "github" {
   for_each           = toset(["terraform", "publish", "deploy", "drift"])
   name               = "${local.name}-${each.key}"
-  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Principal = { Federated = aws_iam_openid_connect_provider.github.arn }, Action = "sts:AssumeRoleWithWebIdentity", Condition = { StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com", "token.actions.githubusercontent.com:sub" = "repo:${var.github_repository}:environment:production" } } }] })
+  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Principal = { Federated = aws_iam_openid_connect_provider.github.arn }, Action = "sts:AssumeRoleWithWebIdentity", Condition = { StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com", "token.actions.githubusercontent.com:sub" = local.github_oidc_subject } } }] })
   tags               = local.tags
 }
 resource "aws_iam_policy" "runtime_boundary" {

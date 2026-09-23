@@ -146,3 +146,5 @@ Merge a tested change into `main`. CI completes before deployment. The deploymen
 If a live smoke test fails after rollout, the workflow fails visibly. Helm automatically rolls back a failed Kubernetes rollout, but a failed external smoke test does not automatically revert unrelated infrastructure. Use the Rollback workflow to select a known-good SHA.
 
 The `production` environment is the authorization boundary for OIDC. Its branch restrictions are mandatory: the OIDC `sub` identifies the environment rather than embedding the branch name.
+
+GitHub uses immutable OIDC subjects for this repository. Bootstrap trust policies must match `repo:OWNER@OWNER_ID/REPO@REPOSITORY_ID:environment:production`, including both numeric IDs. Set `github_owner_id` and `github_repository_id` alongside `github_repository` when adapting the project. A name-only subject causes `sts:AssumeRoleWithWebIdentity` to fail. Verify the presented subject through CloudTrail without logging the JWT; retain exact `StringEquals` matching and the `sts.amazonaws.com` audience.

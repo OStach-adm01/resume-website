@@ -356,8 +356,9 @@ h3 {
   width: 100%;
   height: auto;
   display: block;
-  aspect-ratio: 720/556;
-  object-fit: contain;
+  /* Coursera previews add side margins around the 792 x 612 certificate. */
+  aspect-ratio: 22/17;
+  object-fit: cover;
   transition: transform 0.2s;
 }
 .certificate-image:hover img {

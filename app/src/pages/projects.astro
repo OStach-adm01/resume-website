@@ -1,23 +1,405 @@
 ---
 import Layout from '../layouts/Layout.astro';
+
+// Edit this list in chronological order: oldest first, newest last.
+// Add older projects between existing entries, and append new projects at the end.
+// The page displays the list reversed and highlights its newest entry automatically.
+// Optional fields: href, linkLabel, learned and technologies (arrays of labels).
+interface JourneyEntry {
+  id: string;
+  label: string;
+  title: string;
+  description: string;
+  learned?: string[];
+  technologies?: string[];
+  href?: string;
+  linkLabel?: string;
+}
+const journey: JourneyEntry[] = [
+  {
+    id: 'cs50',
+    label: 'THE START',
+    title: 'CS50',
+    description:
+      'The beginning of my learning path. Got introduced to: Computational Thinking & Fundamentals, Low-Level Programming (C Language), Computer Science Theory & Algorithms, High-Level Programming & Databases, Web Development & Software Architecture, Cybersecurity & Best Practices',
+    // Intentionally left without a link.
+    href: '',
+  },
+  // Copy a project object here and replace its content with your own.
+  // { id: 'my-project', label: 'NEXT STEP', title: 'Project name',
+  //   description: 'What I built, what I learned, and what changed.',
+  //   technologies: ['Linux', 'Python'], href: 'https://github.com/...' },
+  {
+    id: 'AD_homelab',
+    label: 'First experience with virtualization and administration',
+    title: 'AD homelab on Proxmox',
+    description:
+      'Started wanting to learn managing AD environment using VirtualBox on my laptop, ended up installing Proxmox on second SSD on my main PC with 5 VMs (Domain Controller, File Server (Server Core), Admin Workstation, User Workstation)',
+    learned: [
+      'Windows Server Administration',
+      'Active Directory Administration',
+      'DNS Configuration',
+      'Group Policy Management',
+      'Windows Server Core',
+      'SMB File Server Configuration',
+      'NTFS Permission Management',
+      'AGDLP Permission Model',
+      'Virtualization with Proxmox VE',
+      'Windows Client Administration',
+      "and much more that I'm unable to list",
+    ],
+    href: 'https://github.com/OStach-adm01/homelab-proxmox-ad',
+    linkLabel: 'View on GitHub',
+  },
+  {
+    id: 'Terraform_homelab',
+    label: 'First documented experience with IaC',
+    title: 'Terraform managed Proxmox lab',
+    description:
+      'As my curiosity grew I decided to try something new using virtualization, decided to learn using Terraform and Ansible to create reporductive Kubernetes cluster. Also decided to move from using just CLI with nano to VSC and using GIT for version control',
+    learned: [
+      'Terraform',
+      'Proxmox VE',
+      'Ansible',
+      'Kubernetes',
+      'Git',
+      'as well as a ton about Linux systems',
+    ],
+    href: 'https://github.com/OStach-adm01/terraform-lab',
+    linkLabel: 'View on GitHub',
+  },
+  {
+    id: 'ibm-devops',
+    label: 'First certification',
+    title: 'IBM DevOps and Software Engineering Professional Certificate',
+    description:
+      'Looking at weak spots on my resume I decided to gain certification in areas that I was lacking. Along the way I also took Python for Everyone course to sharpen Python basics',
+    learned: [
+      'DevOps',
+      'Software engineering',
+      'Agile',
+      'Scrum',
+      'Cloud computing',
+      'Linux shell scripting',
+      'Python',
+      'Git and GitHub',
+      'Microservices',
+      'Serverless application development',
+      'Docker',
+      'Kubernetes',
+      'OpenShift',
+      'Test-driven development',
+      'Behavior-driven development',
+      'Continuous integration and continuous delivery',
+      'Application security',
+      'Monitoring and observability',
+    ],
+    href: 'https://www.coursera.org/account/accomplishments/specialization/OG7XTC9Q0CWA',
+    linkLabel: 'Verify certificate',
+  },
+  {
+    id: 'AWS_architect',
+    label: 'Certification on Cloud computing',
+    title: 'AWS Cloud Solutions Architect Professional Certificate',
+    description:
+      'Seeing that knowladge of Cloud computing is crucial I decided to learn more about the topic.',
+    learned: ['AWS', 'Cloud Computing'],
+    href: 'https://www.coursera.org/account/accomplishments/specialization/L0EBMK39LFOO',
+    linkLabel: 'Verify certificate',
+  },
+  {
+    id: 'resume-website',
+    label: 'PORTFOLIO / INFRASTRUCTURE',
+    title: 'This website',
+    description:
+      'The portfolio you are exploring. A closer look at the build is on the home page.',
+    technologies: ['AWS', 'Terraform', 'Kubernetes', 'CI/CD'],
+    href: 'https://github.com/OStach-adm01/resume-website',
+    linkLabel: 'View on GitHub',
+  },
+];
+const steps = journey
+  .map((project, index) => ({
+    ...project,
+    step: index + 1,
+    latest: index === journey.length - 1,
+    topics: project.learned ?? project.technologies ?? [],
+  }))
+  .reverse();
 ---
 
-<Layout title="Projects — Olgierd Stach">
-  <main id="main" class="shell prose">
-    <p class="eyebrow">BUILD / LEARN / DOCUMENT</p>
-    <h1>Projects.</h1>
-    <p>
-      A closer look at the environments, automation, and applications I build.
-    </p>
-    <div class="project-note">
-      <strong>Project write-ups are coming soon.</strong>
-      <span>
-        This space will feature selected projects, their implementation details,
-        and evidence of what works.
-      </span>
-    </div>
-    <a class="text-link" href="/#work">
-      Explore the infrastructure behind this website ↗
-    </a>
+<Layout title="Learning path — Olgierd Stach">
+  <main id="main" class="shell journey-page">
+    <header class="journey-intro">
+      <p class="eyebrow">BUILD / LEARN / KEEP GOING</p>
+      <h1>Learning path.</h1>
+      <p class="journey-lead">
+        One path. <em>Many things learned.</em>
+      </p>
+      <p class="journey-description">
+        From the first steps with CS50 to the latest build. Each project is
+        another milestone, with its own questions, experiments, and lessons.
+      </p>
+      <a class="text-link start-link" href="#cs50">
+        Start at the beginning <span aria-hidden="true">↓</span>
+      </a>
+    </header>
+    <section class="journey" aria-label="Learning path, latest to earliest">
+      <p class="direction">
+        <span aria-hidden="true">↑</span> THE PATH CONTINUES
+      </p>
+      <ol class="journey-list" reversed>
+        {steps.map((project) => (
+          <li
+            id={project.id}
+            class:list={['journey-stop', { 'latest-stop': project.latest }]}
+          >
+            <span class="milestone" aria-hidden="true">
+              {String(project.step).padStart(2, '0')}
+            </span>
+            <article
+              class="journey-card"
+              aria-labelledby={`${project.id}-title`}
+            >
+              <p class="eyebrow">
+                {project.latest ? 'LATEST MILESTONE' : project.label}
+              </p>
+              <h2 id={`${project.id}-title`}>{project.title}</h2>
+              <p class="project-description">{project.description}</p>
+              {project.topics.length > 0 && (
+                <ul
+                  class="project-tags"
+                  aria-label={
+                    project.learned ? 'What I learned' : 'Technologies'
+                  }
+                >
+                  {project.topics.map((technology) => (
+                    <li>{technology}</li>
+                  ))}
+                </ul>
+              )}
+              {project.href && (
+                <a class="text-link" href={project.href}>
+                  {project.linkLabel ?? 'Explore this milestone'}{' '}
+                  <span aria-hidden="true">↗</span>
+                </a>
+              )}
+            </article>
+          </li>
+        ))}
+      </ol>
+      <p class="path-origin">
+        <span aria-hidden="true">●</span> EVERY PATH STARTS SOMEWHERE
+      </p>
+    </section>
   </main>
 </Layout>
+
+<style>
+  .journey-page {
+    padding-block: 85px 100px;
+  }
+  .journey-intro {
+    max-width: 720px;
+    margin-bottom: 85px;
+  }
+  .journey-lead {
+    font-size: clamp(24px, 3vw, 38px);
+    letter-spacing: -1px;
+    line-height: 1.25;
+    margin: 0 0 22px;
+  }
+  .journey-lead em {
+    color: var(--accent);
+    font-style: normal;
+  }
+  .journey-description {
+    color: var(--muted);
+    max-width: 570px;
+    font-size: 17px;
+    line-height: 1.8;
+  }
+  .start-link {
+    display: inline-flex;
+    gap: 20px;
+    margin-top: 16px;
+  }
+  .journey {
+    position: relative;
+  }
+  .direction,
+  .path-origin {
+    position: relative;
+    text-align: center;
+    color: var(--muted);
+    font: 10px monospace;
+    letter-spacing: 1.5px;
+  }
+  .direction span,
+  .path-origin span {
+    display: block;
+    color: var(--accent);
+    font-size: 23px;
+    margin-bottom: 16px;
+  }
+  .direction {
+    margin: 0 0 40px;
+  }
+  .path-origin {
+    margin: 0;
+    padding-top: 30px;
+  }
+  .journey-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+  }
+  .journey-list::before {
+    content: '';
+    position: absolute;
+    width: 2px;
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 1px);
+    background: linear-gradient(var(--accent), #34435d);
+  }
+  .journey-stop {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 84px 1fr;
+    padding-bottom: 60px;
+    scroll-margin-top: 32px;
+  }
+  .journey-stop:last-child {
+    padding-bottom: 0;
+  }
+  .milestone {
+    position: absolute;
+    left: 50%;
+    top: 32px;
+    transform: translateX(-50%);
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    background: #101725;
+    color: var(--accent);
+    font: 12px monospace;
+    z-index: 1;
+  }
+  .journey-card {
+    grid-column: 1;
+    position: relative;
+    min-width: 0;
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .journey-card::before {
+    content: '';
+    position: absolute;
+    top: 50px;
+    left: 100%;
+    width: 42px;
+    height: 1px;
+    background: var(--border);
+  }
+  .journey-stop:nth-child(even) .journey-card {
+    grid-column: 3;
+  }
+  .journey-stop:nth-child(even) .journey-card::before {
+    left: auto;
+    right: 100%;
+  }
+  .latest-stop .journey-card {
+    border-color: #5984ad;
+    background: linear-gradient(135deg, #203653, #172238);
+  }
+  .latest-stop .milestone {
+    color: #101725;
+    background: var(--accent);
+    box-shadow: 0 0 0 7px #91c9ff15;
+  }
+  .journey-card .eyebrow {
+    font-size: 10px;
+    margin-bottom: 18px;
+  }
+  .journey-card h2 {
+    font-size: clamp(25px, 3vw, 34px);
+    line-height: 1.15;
+    letter-spacing: -1px;
+    margin: 0 0 18px;
+    overflow-wrap: anywhere;
+  }
+  .project-description {
+    color: #c4d2e9;
+    line-height: 1.8;
+    margin: 0 0 24px;
+    white-space: pre-line;
+  }
+  .project-tags {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    gap: 8px;
+    padding: 0;
+    margin: 0 0 26px;
+  }
+  .project-tags li {
+    font: 11px monospace;
+    color: var(--muted);
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  @media (max-width: 760px) {
+    .journey-page {
+      padding-block: 55px 65px;
+    }
+    .journey-intro {
+      margin-bottom: 60px;
+    }
+    .journey-list::before {
+      left: 18px;
+    }
+    .journey-stop {
+      grid-template-columns: 50px minmax(0, 1fr);
+      padding-bottom: 30px;
+    }
+    .journey-card,
+    .journey-stop:nth-child(even) .journey-card {
+      grid-column: 2;
+      padding: 24px 20px;
+    }
+    .milestone {
+      left: 19px;
+      width: 32px;
+      height: 32px;
+      top: 26px;
+    }
+    .journey-card::before,
+    .journey-stop:nth-child(even) .journey-card::before {
+      left: auto;
+      right: 100%;
+      top: 41px;
+      width: 32px;
+    }
+    .direction,
+    .path-origin {
+      text-align: left;
+      padding-left: 3px;
+    }
+    .direction span,
+    .path-origin span {
+      margin-left: 7px;
+    }
+    .journey-card .eyebrow {
+      line-height: 1.6;
+      letter-spacing: 1px;
+    }
+  }
+</style>

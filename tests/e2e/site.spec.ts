@@ -127,11 +127,15 @@ test('Unavailable CAPTCHA keeps download disabled', async ({ page }) => {
     page.getByRole('button', { name: /Continue to download/ }),
   ).toBeDisabled();
 });
-test('Projects navigation and three verified credentials', async ({ page }) => {
+test('Learning path navigation and three verified credentials', async ({
+  page,
+}) => {
   await page.goto('/');
   await expect(page.locator('.certificate')).toHaveCount(3);
-  await page.getByRole('link', { name: 'Projects', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Projects.' })).toBeVisible();
+  await page.getByRole('link', { name: 'Learning path', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Learning path.' }),
+  ).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 test('Escape closes the modal and restores focus', async ({ page }) => {
